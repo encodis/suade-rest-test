@@ -11,6 +11,9 @@ app = Flask(__name__)
 
 
 def get_db():
+    """Get database connection.
+    """
+
     db = getattr(g, '_database', None)
     if db is None:
         db = g._database = sqlite3.connect(DATABASE)
@@ -19,12 +22,25 @@ def get_db():
 
 @app.teardown_appcontext
 def close_connection(exception):
+    """Close database connection.
+    """
+
     db = getattr(g, '_database', None)
     if db is not None:
         db.close()
 
 
 def query_db(query, args=(), one=False):
+    """Query the database.
+
+    Args:
+        query (str): SQLite query
+        args (tuple, optional): Query arguments. Defaults to ().
+        one (bool, optional): Single or multiple results requested. Defaults to False.
+
+    Returns:
+        variable: Results of the query.
+    """
     cur = get_db().execute(query, args)
     rv = cur.fetchall()
     cur.close()
