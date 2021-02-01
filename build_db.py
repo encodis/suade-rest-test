@@ -80,7 +80,7 @@ def main(args=None):
         if args.rebuild:
             os.remove(args.db_path)
         else:
-            print('Database already exists'.)
+            print('Database already exists.')
             return
 
     create_tables(args.db_path)
