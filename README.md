@@ -66,6 +66,17 @@ Using an invalid date will return the string `Invalid date`. Dates that are vali
 
 > NOTE: Due to time constraints the data returned does not include the "commission" and "promotion" fields.
 
+## Structure
+
+The main bulk of the code is in the `queries.py` module. This sets up a database connection in the correct application context and defines a number of queries against it. The application module (`endpoint.py`) is quite short and simply sets up the correct routing for the application and runs the appropriate query function.
+
 ## Testing
 
+Time constraints preclude the development of more extensive testing. Sample tests are in `test_queries.py` which currently just test date validation. Run the tests using [pytest](https://docs.pytest.org/en/stable/contents.html):
+
+```
+$ pytest
+```
+
+Ideally the database queries themselves would be tested but this would require, for example, a test database to be created (with known values) and the query functions suitably mocked. (This is because the database is not created by the app and populated as it is used---it is, in this example at least, a more external entity.)
 
