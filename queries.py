@@ -74,6 +74,7 @@ def query_summary(date):
     result['order_total_avg'] = query_average_order_total_by_date(from_date, to_date)
     result['commissions'] = {}
     result['commissions']['total'] = query_total_commissions_by_date(from_date, to_date)
+    result['commissions']['order_average'] = query_average_order_commission_by_date(from_date, to_date)
 
     return json.dumps(result, indent=4)
 
@@ -240,6 +241,43 @@ def query_total_commissions_by_date(from_date, to_date):
 
     return 0.0
 
+
+def query_average_order_commission_by_date(from_date, to_date):
+    """Get average order commission by date.
+
+    Args:
+        from_date (str): Date in format 'YYYY-MM-DD' format
+        to_date (str):Date in format 'YYYY-MM-DD' format
+
+    Returns:
+        float: this will be 0.0 if the date is valid but outside the range held in the database.
+    """
+
+    # get rates by date
+    query = f"""
+        SELECT vendor_id, rate
+        FROM commissions
+        WHERE date BETWEEN '{from_date}' AND '{to_date}' """
+
+    # result is a list of 2-tuples
+    result = query_db(query)
+    rates = {i[0]: i[1] for i in result}
+
+    # get average orders
+    query = f"""
+        SELECT SUM(order_lines.total_amount), orders.vendor_id
+        FROM order_lines INNER JOIN orders ON orders.id = order_lines.order_id
+        WHERE orders.created_at BETWEEN '{from_date}' AND '{to_date}'
+        GROUP BY orders.id
+        """
+    
+    # result is a list of 2-tuples: order total, vendor ID        
+    orders = query_db(query)
+    
+    if len(orders) > 0:
+        return sum([t * rates[v] for t,v in orders])/len(orders) 
+
+    return 0.0
 
 def validate_date(date):
     """Validate a given date and return the appropriate 'from' and 'to' dates.
