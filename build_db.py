@@ -38,9 +38,16 @@ def create_tables(db_path):
         );
         """)
     
+    curs.execute("""
+        CREATE TABLE IF NOT EXISTS commissions (
+            date TEXT,
+            vendor_id INTEGER,
+            rate REAL
+        );
+        """)
+    
     conn.commit()
     conn.close()
-
 
 def populate_tables(db_path, data_dir):
     conn = sqlite3.connect(db_path)
@@ -59,6 +66,13 @@ def populate_tables(db_path, data_dir):
         rows = [(i['order_id'], i['product_id'], i['product_description'], i['product_price'], i['product_vat_rate'], i['discount_rate'], i['quantity'], i['full_price_amount'], i['discounted_amount'], i['vat_amount'], i['total_amount']) for i in dr]
 
     curs.executemany("INSERT INTO order_lines (order_id, product_id, product_description, product_price, product_vat_rate, discount_rate, quantity, full_price_amount, discounted_amount, vat_amount, total_amount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);", rows)    
+    
+    # populate commissions table
+    with open(os.path.join(data_dir, 'commissions.csv'), 'r') as f:
+        dr = csv.DictReader(f)
+        rows = [(i['date'], i['vendor_id'], i['rate']) for i in dr]
+    
+    curs.executemany("INSERT INTO commissions (date, vendor_id, rate) VALUES (?, ?, ?);", rows)
     
     conn.commit()
     conn.close()

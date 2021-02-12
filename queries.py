@@ -59,18 +59,21 @@ def query_summary(date):
     Returns:
         str: Summary as a JSON string, or "Invalid date"
     """
-    
+
     try:
         from_date, to_date = validate_date(date)
     except ValueError:
         return "Invalid date"
 
+    # TODO round to 2 d.p.
     result = {}
     result['items'] = query_total_items_by_date(from_date, to_date)
     result['customers'] = query_total_customers_by_date(from_date, to_date)
     result['total_discount_amount'] = query_total_discount_by_date(from_date, to_date)
     result['discount_rate_avg'] = query_average_discount_rate_by_date(from_date, to_date)
     result['order_total_avg'] = query_average_order_total_by_date(from_date, to_date)
+    result['commissions'] = {}
+    result['commissions']['total'] = query_total_commissions_by_date(from_date, to_date)
 
     return json.dumps(result, indent=4)
 
@@ -99,7 +102,11 @@ def query_total_items_by_date(from_date, to_date):
 
 def query_total_customers_by_date(from_date, to_date):
     """Query the database for the total number of customers submitting orders on a given date.
-       
+
+    Args:
+        from_date (str): Date in format 'YYYY-MM-DD' format
+        to_date (str):Date in format 'YYYY-MM-DD' format
+
     Returns:
         int: this will be 0 if the date is valid but outside the range held in the database.
     """
@@ -119,7 +126,11 @@ def query_total_discount_by_date(from_date, to_date):
     """Query the database for the total discount given on a given date.
     
     It is assumed that the discount is the 'full_price_amoumnt' minus the 'discounted_amount'
-        
+
+    Args:
+        from_date (str): Date in format 'YYYY-MM-DD' format
+        to_date (str):Date in format 'YYYY-MM-DD' format
+
     Returns:
         float: this will be 0.0 if the date is valid but outside the range held in the database.
     """
@@ -138,7 +149,11 @@ def query_average_discount_rate_by_date(from_date, to_date):
     """Query the database for the average discount given on a given date.
     
     The average is calculated for non-zero discount rates.
-        
+
+    Args:
+        from_date (str): Date in format 'YYYY-MM-DD' format
+        to_date (str):Date in format 'YYYY-MM-DD' format
+
     Returns:
         float: this will be 0.0 if the date is valid but outside the range held in the database.
     """
@@ -161,7 +176,11 @@ def query_average_order_total_by_date(from_date, to_date):
     """Query the database for the average order total given on a given date.
     
     The average is calculated over the total amount for each individual order.
-    
+
+    Args:
+        from_date (str): Date in format 'YYYY-MM-DD' format
+        to_date (str):Date in format 'YYYY-MM-DD' format
+
     Returns:
         float: this will be 0.0 if the date is valid but outside the range held in the database.
     """
@@ -179,6 +198,47 @@ def query_average_order_total_by_date(from_date, to_date):
     result = [r[0] for r in result]
     
     return 0.0 if len(result) == 0 else sum(result)/len(result)
+
+
+def query_total_commissions_by_date(from_date, to_date):
+    """Get total commissions by date.
+
+    This assumes that this is the total for an order multiplied by the rate for that
+    vendor on that date.    
+
+    Args:
+        from_date (str): Date in format 'YYYY-MM-DD' format
+        to_date (str):Date in format 'YYYY-MM-DD' format
+
+    Returns:
+        float: this will be 0.0 if the date is valid but outside the range held in the database.
+    """
+    
+    # get rates by date
+    query = f"""
+        SELECT vendor_id, rate
+        FROM commissions
+        WHERE date BETWEEN '{from_date}' AND '{to_date}' """
+
+    # result is a list of 2-tuples
+    result = query_db(query)
+    rates = {i[0]: i[1] for i in result}
+    
+    query = f"""
+        SELECT order_lines.total_amount, orders.vendor_id
+        FROM order_lines INNER JOIN orders ON orders.id = order_lines.order_id
+        WHERE orders.created_at BETWEEN '{from_date}' AND '{to_date}'
+        GROUP BY orders.vendor_id
+        """
+    
+    # result is a list of 2-tuples
+    result = query_db(query)
+    vendors = {i[1]: i[0] for i in result}
+
+    if rates and vendors:
+        return sum([v * rates.get(k, '0.0') for k, v in vendors.items()])
+
+    return 0.0
 
 
 def validate_date(date):
