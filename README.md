@@ -47,24 +47,31 @@ $ FLASK_APP=endpoint.py python3 -m flask run
 Default values for the server IP address are used. To query the application issue a request of the form:
 
 ```
-http://127.0.0.1:5000/summary/2019-09-01
+http://127.0.0.1:5000/summary/2019-08-01
 ```
 
 Results are returned as a JSON formatted string:
 
 ```
 {
-    "items": 2699,
-    "customers": 8,
-    "total_discount_amount": 18164159.989283696,
-    "discount_rate_avg": 0.5483430441509592,
-    "order_total_avg": 17027476.990291964
+    "items": 2895,
+    "customers": 9,
+    "total_discount_amount": 15152814.736907527,
+    "discount_rate_avg": 0.4457418957252218,
+    "order_total_avg": 15895179.735734595,
+    "commissions": {
+        "total": 914342.3436,
+        "order_average": 2627697.374617506,
+        "promotions": {
+            "2": 2686420,
+            "5": 8602640
+        }
+    }
 }
 ```
 
-Using an invalid date will return the string `Invalid date`. Dates that are valid dates but outside the range of dates held within the database will return 0 for all entries in the summary.
+Using an invalid (i.e. incorrectly formatted) date will return the string `Invalid date`. Dates that are valid but that are outside the range of dates held within the database will return 0 for all entries in the summary.
 
-> NOTE: Due to time constraints the data returned does not include the "commission" and "promotion" fields.
 
 ## Structure
 

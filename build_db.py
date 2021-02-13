@@ -46,6 +46,14 @@ def create_tables(db_path):
         );
         """)
     
+    curs.execute("""
+        CREATE TABLE IF NOT EXISTS product_promo (
+            date TEXT,
+        product_id INTEGER,
+        promotion_id INTEGER
+        );
+        """)
+    
     conn.commit()
     conn.close()
 
@@ -74,6 +82,14 @@ def populate_tables(db_path, data_dir):
     
     curs.executemany("INSERT INTO commissions (date, vendor_id, rate) VALUES (?, ?, ?);", rows)
     
+    # populate product promotions table
+    with open(os.path.join(data_dir, 'product_promotions.csv'), 'r') as f:
+        dr = csv.DictReader(f)
+        rows = [(i['date'], i['product_id'], i['promotion_id']) for i in dr]
+    
+    curs.executemany("INSERT INTO product_promo (date, product_id, promotion_id) VALUES (?, ?, ?);", rows)
+
+    # finalise
     conn.commit()
     conn.close()
 

@@ -65,7 +65,6 @@ def query_summary(date):
     except ValueError:
         return "Invalid date"
 
-    # TODO round to 2 d.p.
     result = {}
     result['items'] = query_total_items_by_date(from_date, to_date)
     result['customers'] = query_total_customers_by_date(from_date, to_date)
@@ -75,6 +74,7 @@ def query_summary(date):
     result['commissions'] = {}
     result['commissions']['total'] = query_total_commissions_by_date(from_date, to_date)
     result['commissions']['order_average'] = query_average_order_commission_by_date(from_date, to_date)
+    result['commissions']['promotions'] = query_total_commissions_per_promotion_by_date(from_date, to_date)
 
     return json.dumps(result, indent=4)
 
@@ -84,7 +84,7 @@ def query_total_items_by_date(from_date, to_date):
 
     Args:
         from_date (str): Date in format 'YYYY-MM-DD' format
-        to_date (str):Date in format 'YYYY-MM-DD' format
+        to_date (str): Date in format 'YYYY-MM-DD' format
 
     Returns:
         int: this will be 0 if the date is valid but outside the range held in the database.
@@ -106,7 +106,7 @@ def query_total_customers_by_date(from_date, to_date):
 
     Args:
         from_date (str): Date in format 'YYYY-MM-DD' format
-        to_date (str):Date in format 'YYYY-MM-DD' format
+        to_date (str): Date in format 'YYYY-MM-DD' format
 
     Returns:
         int: this will be 0 if the date is valid but outside the range held in the database.
@@ -130,7 +130,7 @@ def query_total_discount_by_date(from_date, to_date):
 
     Args:
         from_date (str): Date in format 'YYYY-MM-DD' format
-        to_date (str):Date in format 'YYYY-MM-DD' format
+        to_date (str): Date in format 'YYYY-MM-DD' format
 
     Returns:
         float: this will be 0.0 if the date is valid but outside the range held in the database.
@@ -153,7 +153,7 @@ def query_average_discount_rate_by_date(from_date, to_date):
 
     Args:
         from_date (str): Date in format 'YYYY-MM-DD' format
-        to_date (str):Date in format 'YYYY-MM-DD' format
+        to_date (str): Date in format 'YYYY-MM-DD' format
 
     Returns:
         float: this will be 0.0 if the date is valid but outside the range held in the database.
@@ -180,7 +180,7 @@ def query_average_order_total_by_date(from_date, to_date):
 
     Args:
         from_date (str): Date in format 'YYYY-MM-DD' format
-        to_date (str):Date in format 'YYYY-MM-DD' format
+        to_date (str): Date in format 'YYYY-MM-DD' format
 
     Returns:
         float: this will be 0.0 if the date is valid but outside the range held in the database.
@@ -209,7 +209,7 @@ def query_total_commissions_by_date(from_date, to_date):
 
     Args:
         from_date (str): Date in format 'YYYY-MM-DD' format
-        to_date (str):Date in format 'YYYY-MM-DD' format
+        to_date (str): Date in format 'YYYY-MM-DD' format
 
     Returns:
         float: this will be 0.0 if the date is valid but outside the range held in the database.
@@ -247,7 +247,7 @@ def query_average_order_commission_by_date(from_date, to_date):
 
     Args:
         from_date (str): Date in format 'YYYY-MM-DD' format
-        to_date (str):Date in format 'YYYY-MM-DD' format
+        to_date (str): Date in format 'YYYY-MM-DD' format
 
     Returns:
         float: this will be 0.0 if the date is valid but outside the range held in the database.
@@ -278,6 +278,46 @@ def query_average_order_commission_by_date(from_date, to_date):
         return sum([t * rates[v] for t,v in orders])/len(orders) 
 
     return 0.0
+
+
+def query_total_commissions_per_promotion_by_date(from_date, to_date):
+    """Get total commission for each promotion active on a given date.
+
+    Args:
+        from_date (str): Date in format 'YYYY-MM-DD' format
+        to_date (str): Date in format 'YYYY-MM-DD' format
+
+    Returns:
+        dict: promotion ID as the key with total commission as the value. Will be empty
+        if the date is outside the range held in the database.
+    """
+    
+    # get product totals by date
+    query = f"""
+        SELECT SUM(order_lines.total_amount), order_lines.product_id
+        FROM order_lines INNER JOIN orders ON orders.id = order_lines.order_id
+        WHERE orders.created_at BETWEEN '{from_date}' AND '{to_date}'
+        GROUP BY order_lines.product_id
+        """
+    
+    # result is a list of 2-tuples: total amount and product ID
+    products = query_db(query)
+    
+    # get product promotions for that date
+    query = f"""
+        SELECT promotion_id, product_id
+        FROM product_promo
+        WHERE date = '{from_date}'
+        """
+
+    # result is a list of 2-tuples: promotion ID and product ID
+    promotions = query_db(query)
+
+    # only keep product totals where there is an active promotion
+    result = {str(promotion[0]): product[0] for product in products for promotion in promotions if promotion[1] == product[1]}
+    
+    return result
+
 
 def validate_date(date):
     """Validate a given date and return the appropriate 'from' and 'to' dates.
